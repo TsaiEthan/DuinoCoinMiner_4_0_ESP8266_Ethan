@@ -19,6 +19,8 @@
 /* If optimizations cause problems, change them to -O0 (the default) */
 #pragma GCC optimize("-Ofast")
 
+bool showDebugMessage = false;
+
 /* If during compilation the line below causes a
   "fatal error: arduinoJson.h: No such file or directory"
   message to occur; it means that you do NOT have the
@@ -74,37 +76,43 @@ WebServer server(80);
 #include <FS.h>
 
 String readFile(const char* path) {
-    //Serial.printf("Reading file: %s\r\n", path);
+    if (showDebugMessage)
+        Serial.printf("Reading file: %s\r\n", path);
     File file = SPIFFS.open(path, "r");
     if (!file || file.isDirectory()) {
-        Serial.println("- empty file or failed to open file");
+        if (showDebugMessage)
+            Serial.println("- empty file or failed to open file");
         return String();
     }
-    //Serial.print("- read from file:");
+    if (showDebugMessage)
+        Serial.print("- read from file:");
     String fileContent;
     while (file.available()) {
         fileContent += String((char)file.read());
     }
     file.close();
-    //Serial.println(fileContent);
+    if (showDebugMessage)
+        Serial.println(fileContent);
     return fileContent;
 }
 void writeFile(const char* path, const char* message) {
-    //Serial.printf("Writing file: %s\r\n", path);
+    if (showDebugMessage)
+        Serial.printf("Writing file: %s\r\n", path);
     File file = SPIFFS.open(path, "w");
     if (!file) {
-        Serial.println("- failed to open file for writing");
+        if (showDebugMessage)
+            Serial.println("- failed to open file for writing");
         return;
     }
-    file.print(message);
-    /*
-    if (file.print(message)) {
-        Serial.println("- file written");
+    bool res = file.print(message);
+    if (showDebugMessage) {
+        if (res) {
+            Serial.println("- file written");
+        }
+        else {
+            Serial.println("- write failed");
+        }
     }
-    else {
-        Serial.println("- write failed");
-    }
-    */
     delay(50);  // Make sure the CREATE and LASTWRITE times are different
     file.close();
 }
@@ -115,22 +123,51 @@ char rigName[30];
 
 #include <WiFiManager.h>
 #define TRIGGER_PIN 0
-WiFiManager wm;
+char setupAPName[30] = "DuinoCoin-AP";
+char loopAPName[30] = "LoopDuinoCoin-AP";
+unsigned int setConnectTime = 20;
+bool shouldSaveConfig = false;
 
 //callback notifying us of the need to save config
-//void saveConfigCallback() {
+void saveConfigCallback() {
+    if (showDebugMessage)
+        Serial.println("Set shouldSaveConfig = true");
+    shouldSaveConfig = true;
+}
 
-//}
+void WriteDataToFS(String whoCallTheFunction, String writeAccountData, String writeMinerKeyData, String writeRigNameData) {
+    
 
-void ReadFSData() {
     if (!SPIFFS.begin()) { //to start littlefs
-        Serial.println("SPIFFS mount failed");
+        if (showDebugMessage)
+            Serial.println("SPIFFS mount failed");
         return;
     }
     else {
-        //Serial.println("SPIFFS Mounted Successfully");
+        if (showDebugMessage)
+            Serial.println("SPIFFS Mounted Successfully");
     }
-    //Serial.println("Should read FS data");
+    if (showDebugMessage)
+        Serial.println(whoCallTheFunction + ": Should save config");
+    writeFile("/account.txt", writeAccountData.c_str());
+    writeFile("/minerKey.txt", writeMinerKeyData.c_str());
+    writeFile("/rigName.txt", writeRigNameData.c_str());
+    SPIFFS.end();
+    ReadFSData();
+}
+
+void ReadFSData() {
+    if (!SPIFFS.begin()) { //to start littlefs
+        if (showDebugMessage)
+            Serial.println("SPIFFS mount failed");
+        return;
+    }
+    else {
+        if (showDebugMessage)
+            Serial.println("SPIFFS Mounted Successfully");
+    }
+    if (showDebugMessage)
+        Serial.println("Should read FS data");
 
     if (readFile("/account.txt") == "") {
         strcpy(account, "919ethan");
@@ -156,11 +193,11 @@ void ReadFSData() {
     SPIFFS.end();
 }
 
-void ShowConfigData() {
+void ShowConfigData(bool WiFiIsSaved, String WiFiSSID, String WiFiPWD) {
     Serial.println("The values in the file are: ");
-    if (wm.getWiFiIsSaved()) {
-        Serial.println("SSIDforRun : " + wm.getWiFiSSID());
-        Serial.println("PASSWORDforRun : " + wm.getWiFiPass());
+    if (WiFiIsSaved) {
+        Serial.println("SSIDforRun : " + WiFiSSID);
+        Serial.println("PASSWORDforRun : " + WiFiPWD);
     }
     Serial.println("DUCO_USER : " + String(account));
     Serial.println("MINER_KEY : " + String(minerKey));
@@ -178,6 +215,7 @@ void SecondToRestart() {
 }
 
 void setupWiFiManager() {
+    shouldSaveConfig = false;
     ReadFSData();
 
     // The extra parameters to be configured (can be either global or just in the setup)
@@ -187,8 +225,11 @@ void setupWiFiManager() {
     WiFiManagerParameter custom_minigkey("minigkey", "挖礦密碼(非登入密碼)：", minerKey, 30);
     WiFiManagerParameter custom_rigname("rigname", "挖礦機名稱：", rigName, 30);
 
+    WiFiManager wm;
+    
+    wm.setSaveConfigCallback(saveConfigCallback); //set config save notify callback
     wm.setDarkMode(true); //設定是否為黑底模式
-    wm.setDebugOutput(true);  // 輸出除錯訊息
+    wm.setDebugOutput(showDebugMessage);  // 輸出除錯訊息
     wm.setBreakAfterConfig(true);
     //wm.resetSettings();
     //wm.setTimeout(12);
@@ -196,38 +237,30 @@ void setupWiFiManager() {
     //wm.setConfigPortalTimeout(setCloseConfigportalTime); // auto close configportal after n seconds
     wm.setScanDispPerc(true); //是否百分比顯示
     wm.setMinimumSignalQuality(10); //設定最低訊號強度百分比(數字)，預設為8
-    //set config save notify callback
-    //wm.setSaveConfigCallback(saveConfigCallback);
+
 
     //add all your parameters here
     wm.addParameter(&custom_account);
     wm.addParameter(&custom_minigkey);
     wm.addParameter(&custom_rigname);
 
-    if (!wm.autoConnect("DuinoCoin-AP")) {
-        SecondToRestart();
+    while (!wm.autoConnect(setupAPName)) {
+        wm.autoConnect(setupAPName);
     }
 
-    if (!SPIFFS.begin()) { //to start littlefs
-        Serial.println("SPIFFS mount failed");
-        return;
+    if (showDebugMessage)
+        Serial.println("shouldSaveConfig is: " + String(shouldSaveConfig));
+
+    //save the custom parameters to FS
+    if (shouldSaveConfig) {
+        WriteDataToFS(setupAPName, custom_account.getValue(), custom_minigkey.getValue(), custom_rigname.getValue());
     }
-    else {
-        //Serial.println("SPIFFS Mounted Successfully");
+
+    if (showDebugMessage && WiFi.waitForConnectResult() == WL_CONNECTED) {
+        Serial.println("connected to " + wm.getWiFiSSID() + " success!!");
+
+        ShowConfigData(wm.getWiFiIsSaved(), wm.getWiFiSSID(), wm.getWiFiPass());
     }
-    //Serial.println("Should save config");
-    writeFile("/account.txt", custom_account.getValue());
-    writeFile("/minerKey.txt", custom_minigkey.getValue());
-    writeFile("/rigName.txt", custom_rigname.getValue());
-    SPIFFS.end();
-
-    ReadFSData();
-
-    Serial.print("connected to ");
-    Serial.print(wm.getWiFiSSID());
-    Serial.println(" success!!");
-
-    ShowConfigData();
 }
 
 void doWiFiManager() {   // 執行WiFi管理員的工作
@@ -237,9 +270,11 @@ void doWiFiManager() {   // 執行WiFi管理員的工作
     if (digitalRead(TRIGGER_PIN) == LOW) {
         delay(1500);
         if (digitalRead(TRIGGER_PIN) == LOW) {
+            shouldSaveConfig = false;
             Serial.println("按鈕被按下1.5秒了，啟動設置入口。");
             ReadFSData();
             
+            WiFiManager wm;
             // The extra parameters to be configured (can be either global or just in the setup)
             // After connecting, parameter.getValue() will get you the configured value
             // id/name placeholder/prompt default length
@@ -247,45 +282,74 @@ void doWiFiManager() {   // 執行WiFi管理員的工作
             WiFiManagerParameter custom_minigkey("minigkey", "挖礦密碼(非登入密碼)：", minerKey, 30);
             WiFiManagerParameter custom_rigname("rigname", "挖礦機名稱：", rigName, 30);
 
+            wm.setDarkMode(true); //設定是否為黑底模式
+            wm.setDebugOutput(showDebugMessage);  // 輸出除錯訊息
+            wm.setBreakAfterConfig(true);
+            //wm.resetSettings();
+            //wm.setConnectTimeout(setConnectTime); // how long to try to connect for before continuing
+            //wm.setConfigPortalTimeout(setCloseConfigportalTime); // auto close configportal after n seconds
+            wm.setScanDispPerc(true); //是否百分比顯示
+            wm.setMinimumSignalQuality(10); //設定最低訊號強度百分比(數字)，預設為8
+            //set config save notify callback
+            wm.setSaveConfigCallback(saveConfigCallback);
+
+            //add all your parameters here
+            wm.addParameter(&custom_account);
+            wm.addParameter(&custom_minigkey);
+            wm.addParameter(&custom_rigname);
+            wm.setCleanConnect(true);
             wm.setConfigPortalBlocking(true); // 設定啟用「設置入口」時，是否擱置其他連線請求，傳入false代表不擱置
-            // 啟用Wi-Fi AP
-            wm.startConfigPortal("LoopDuinoCoin-AP");
+            wm.startConfigPortal(loopAPName); // 啟用Wi-Fi AP
 
-            if (!SPIFFS.begin()) { //to start littlefs
-                Serial.println("SPIFFS mount failed");
-                return;
+            if (showDebugMessage)
+                Serial.println("shouldSaveConfig is: " + String(shouldSaveConfig));
+
+            //save the custom parameters to FS
+            if (shouldSaveConfig) {
+                WriteDataToFS(loopAPName, custom_account.getValue(), custom_minigkey.getValue(), custom_rigname.getValue());
+
+                WiFi.mode(WIFI_STA); // Setup ESP in client mode
+                delay(1000);
+            #if defined(ESP8266)
+                WiFi.setSleepMode(WIFI_NONE_SLEEP);
+            #else
+                WiFi.setSleep(false);
+            #endif
+                WiFi.begin(wm.getWiFiSSID(), wm.getWiFiPass());
+
+                int wait_passes = 0;
+                while (WiFi.waitForConnectResult() != WL_CONNECTED) {
+                    if (wait_passes == 0) {
+                        Serial.print("connecting ");
+                    }
+                    else {
+                        Serial.print(".");
+                    }
+                    wait_passes++;
+                    delay(500);
+                    
+                    if (wait_passes/2 > setConnectTime) {
+                        wm.resetSettings();
+                        SecondToRestart();
+                    }
+                }                
             }
-            else {
-                //Serial.println("SPIFFS Mounted Successfully");
+            if (showDebugMessage && WiFi.waitForConnectResult() == WL_CONNECTED) {
+                Serial.println("connected to " + wm.getWiFiSSID() + " success!!");
+
+                ShowConfigData(wm.getWiFiIsSaved(), wm.getWiFiSSID(), wm.getWiFiPass());
             }
-            //Serial.println("Should save config");
-            writeFile("/account.txt", custom_account.getValue());
-            writeFile("/minerKey.txt", custom_minigkey.getValue());
-            writeFile("/rigName.txt", custom_rigname.getValue());
-            SPIFFS.end();
-
-            ReadFSData();
-
-            Serial.print("connected to ");
-            Serial.print(wm.getWiFiSSID());
-            Serial.println(" success!!");
-
-            ShowConfigData();
         }
     }
   }
-  if(!WiFi.isConnected()) {
-      SecondToRestart();
-  }
 }
-
+// put your setup code here, to run once:
 void setup() {
+    
     WiFi.mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP  
     Serial.begin(921600);
-    //Serial.begin(115200);
-    delay(500);
+    delay(500);    
     
-    // put your setup code here, to run once:
     pinMode(TRIGGER_PIN, INPUT_PULLUP);
 
     setupWiFiManager();

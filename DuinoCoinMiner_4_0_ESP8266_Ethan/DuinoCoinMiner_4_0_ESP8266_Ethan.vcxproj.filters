@@ -16,6 +16,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DuinoCoinMiner_4_0_ESP8266_Ethan.ino" />
+    <ClCompile Include="myWiFiManager.cpp">
+      <Filter>Header Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="__vm\.DuinoCoinMiner_4_0_ESP8266_Ethan.vsarduino.h">

@@ -78,6 +78,7 @@
       <FileType>CppCode</FileType>
       <DeploymentContent>true</DeploymentContent>
     </ClCompile>
+    <ClCompile Include="myWiFiManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Counter.h" />

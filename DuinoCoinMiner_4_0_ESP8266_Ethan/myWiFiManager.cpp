@@ -1,12 +1,7 @@
+ï»¿
+#include "myWiFiManager.h"
+#include "MiningJob.h"
 #include <Arduino.h>
-#include <FS.h>
-
-//char account[30];
-//char minerKey[30];
-//char rigName[30];
-
-#include <WiFiManager.h>
-#define TRIGGER_PIN 0
 
 bool showDebugMessage = false;
 bool wiFiManagerDebugOutput = true;
@@ -15,7 +10,20 @@ char loopAPName[30] = "DuinoCoin-AP";
 unsigned int setConnectTime = 20;
 bool shouldSaveConfig = false;
 
+const char DUCO_USER[] = "my_cool_username";
+const char MINER_KEY[] = "mySecretPass";
+const char SSID[] = "SSID";
+const char PASSWORD[] = "PASSW0RD";
+const char RIG_IDENTIFIER[] = "None";
+unsigned int hashrate = 0;
+unsigned int difficulty = 0;
+unsigned long share_count = 0;
+String node_id = "";
+String WALLET_ID = "";
+
 namespace {
+
+
     String readFile(const char* path) {
         if (showDebugMessage)
             Serial.printf("Reading file: %s\r\n", path);
@@ -108,7 +116,7 @@ namespace {
         SPIFFS.end();
     }
 
-    void WriteDataToFS(String whoCallTheFunction, String writeAccountData, String writeMinerKeyData, String writeSSIDData, String writePWDData, String writeRigNameData) {
+    void WriteDataToFS(String whoCallTheFunction, String writeAccountData, String writeMinerKeyData, String writeRigNameData) {
 
 
         if (!SPIFFS.begin()) { //to start littlefs
@@ -157,21 +165,21 @@ namespace {
         // The extra parameters to be configured (can be either global or just in the setup)
         // After connecting, parameter.getValue() will get you the configured value
         // id/name placeholder/prompt default length
-        WiFiManagerParameter custom_account("account", "DuinoCoin±b¸¹¡G", configuration->DUCO_USER.c_str(), 30);
-        WiFiManagerParameter custom_minigkey("minigkey", "«õÄq±K½X(«Dµn¤J±K½X)¡G", configuration->MINER_KEY.c_str(), 30);
-        WiFiManagerParameter custom_rigname("rigname", "«õÄq¾÷¦WºÙ¡G", configuration->RIG_IDENTIFIER.c_str(), 30);
+        WiFiManagerParameter custom_account("account", "DuinoCoinå¸³è™Ÿï¼š", configuration->DUCO_USER.c_str(), 30);
+        WiFiManagerParameter custom_minigkey("minigkey", "æŒ–ç¤¦å¯†ç¢¼(éç™»å…¥å¯†ç¢¼)ï¼š", configuration->MINER_KEY.c_str(), 30);
+        WiFiManagerParameter custom_rigname("rigname", "æŒ–ç¤¦æ©Ÿåç¨±ï¼š", configuration->RIG_IDENTIFIER.c_str(), 30);
 
         WiFiManager wm;
         wm.setSaveConfigCallback(saveConfigCallback); //set config save notify callback
-        wm.setDarkMode(true); //³]©w¬O§_¬°¶Â©³¼Ò¦¡
-        wm.setDebugOutput(wiFiManagerDebugOutput);  // ¿é¥X°£¿ù°T®§
+        wm.setDarkMode(true); // è¨­å®šæ˜¯å¦ç‚ºé»‘åº•æ¨¡å¼
+        wm.setDebugOutput(wiFiManagerDebugOutput);  // è¼¸å‡ºé™¤éŒ¯è¨Šæ¯
         wm.setBreakAfterConfig(true);
         //wm.resetSettings();
         //wm.setTimeout(12);
         //wm.setConnectTimeout(setConnectTime); // how long to try to connect for before continuing
         //wm.setConfigPortalTimeout(setCloseConfigportalTime); // auto close configportal after n seconds
-        wm.setScanDispPerc(true); //¬O§_¦Ê¤À¤ñÅã¥Ü
-        wm.setMinimumSignalQuality(40); //³]©w³Ì§C°T¸¹±j«×¦Ê¤À¤ñ(¼Æ¦r)¡A¹w³]¬°8
+        wm.setScanDispPerc(true); // æ˜¯å¦ç™¾åˆ†æ¯”é¡¯ç¤º
+        wm.setMinimumSignalQuality(40); // è¨­å®šæœ€ä½è¨Šè™Ÿå¼·åº¦ç™¾åˆ†æ¯”(æ•¸å­—)ï¼Œé è¨­ç‚º8
 
 
         //add all your parameters here
@@ -188,7 +196,7 @@ namespace {
 
         //save the custom parameters to FS
         if (shouldSaveConfig) {
-            WriteDataToFS(setupAPName, custom_account.getValue(), custom_minigkey.getValue(), wm.getWiFiSSID(), wm.getWiFiPass(), custom_rigname.getValue());
+            WriteDataToFS(setupAPName, custom_account.getValue(), custom_minigkey.getValue(), custom_rigname.getValue());
         }
 
         Serial.println("\n\nconnected to " + wm.getWiFiSSID() + " success!!");
@@ -207,15 +215,15 @@ namespace {
         SelectNode();
     }
 
-    void doWiFiManager() {   // °õ¦æWiFiºŞ²z­ûªº¤u§@
-        // ­Y±Ò¥Î¡u³]¸m¤J¤f¡vªº±µ¸}³Q«ö¤U1.5¬í
+    void doWiFiManager() {   // åŸ·è¡ŒWiFiç®¡ç†å“¡çš„å·¥ä½œ
+        // // è‹¥æŒ‰éˆ•<Flash>è¢«æŒ‰ä¸‹1.5ç§’
         if (digitalRead(TRIGGER_PIN) == LOW) {
             delay(50);
             if (digitalRead(TRIGGER_PIN) == LOW) {
                 delay(1500);
                 if (digitalRead(TRIGGER_PIN) == LOW) {
                     shouldSaveConfig = false;
-                    Serial.println("«ö¶s³Q«ö¤U1.5¬í¤F¡A±Ò°Ê³]¸m¤J¤f¡C");
+                    Serial.println("æŒ‰éˆ•<Flash>è¢«æŒ‰ä¸‹1.5ç§’äº†ï¼Œå•Ÿå‹•è¨­ç½®å…¥å£");
                     ReadFSData();
 
                     if (showDebugMessage) {
@@ -226,18 +234,18 @@ namespace {
                     // The extra parameters to be configured (can be either global or just in the setup)
                     // After connecting, parameter.getValue() will get you the configured value
                     // id/name placeholder/prompt default length
-                    WiFiManagerParameter custom_account("account", "DuinoCoin±b¸¹¡G", configuration->DUCO_USER.c_str(), 30);
-                    WiFiManagerParameter custom_minigkey("minigkey", "«õÄq±K½X(«Dµn¤J±K½X)¡G", configuration->MINER_KEY.c_str(), 30);
-                    WiFiManagerParameter custom_rigname("rigname", "«õÄq¾÷¦WºÙ¡G", configuration->RIG_IDENTIFIER.c_str(), 30);
+                    WiFiManagerParameter custom_account("account", "DuinoCoinå¸³è™Ÿï¼š", configuration->DUCO_USER.c_str(), 30);
+                    WiFiManagerParameter custom_minigkey("minigkey", "æŒ–ç¤¦å¯†ç¢¼(éç™»å…¥å¯†ç¢¼)ï¼š", configuration->MINER_KEY.c_str(), 30);
+                    WiFiManagerParameter custom_rigname("rigname", "æŒ–ç¤¦æ©Ÿåç¨±ï¼š", configuration->RIG_IDENTIFIER.c_str(), 30);
 
-                    wm.setDarkMode(true); //³]©w¬O§_¬°¶Â©³¼Ò¦¡
-                    wm.setDebugOutput(wiFiManagerDebugOutput);  // ¿é¥X°£¿ù°T®§
+                    wm.setDarkMode(true); // è¨­å®šæ˜¯å¦ç‚ºé»‘åº•æ¨¡å¼
+                    wm.setDebugOutput(wiFiManagerDebugOutput);  // è¼¸å‡ºé™¤éŒ¯è¨Šæ¯
                     wm.setBreakAfterConfig(true);
                     //wm.resetSettings();
                     //wm.setConnectTimeout(setConnectTime); // how long to try to connect for before continuing
                     //wm.setConfigPortalTimeout(setCloseConfigportalTime); // auto close configportal after n seconds
-                    wm.setScanDispPerc(true); //¬O§_¦Ê¤À¤ñÅã¥Ü
-                    wm.setMinimumSignalQuality(40); //³]©w³Ì§C°T¸¹±j«×¦Ê¤À¤ñ(¼Æ¦r)¡A¹w³]¬°8
+                    wm.setScanDispPerc(true); // æ˜¯å¦ç™¾åˆ†æ¯”é¡¯ç¤º
+                    wm.setMinimumSignalQuality(40); // è¨­å®šæœ€ä½è¨Šè™Ÿå¼·åº¦ç™¾åˆ†æ¯”(æ•¸å­—)ï¼Œé è¨­ç‚º8
                     //set config save notify callback
                     wm.setSaveConfigCallback(saveConfigCallback);
 
@@ -246,8 +254,8 @@ namespace {
                     wm.addParameter(&custom_minigkey);
                     wm.addParameter(&custom_rigname);
                     wm.setCleanConnect(true);
-                    wm.setConfigPortalBlocking(true); // ³]©w±Ò¥Î¡u³]¸m¤J¤f¡v®É¡A¬O§_ÀÁ¸m¨ä¥L³s½u½Ğ¨D¡A¶Ç¤Jfalse¥Nªí¤£ÀÁ¸m
-                    wm.startConfigPortal(loopAPName); // ±Ò¥ÎWi-Fi AP
+                    wm.setConfigPortalBlocking(true); // è¨­å®šå•Ÿç”¨ã€Œè¨­ç½®å…¥å£ã€æ™‚ï¼Œæ˜¯å¦æ“±ç½®å…¶ä»–é€£ç·šè«‹æ±‚ï¼Œå‚³å…¥falseä»£è¡¨ä¸æ“±ç½®
+                    wm.startConfigPortal(loopAPName); // å•Ÿç”¨Wi-Fi AP
 
                     if (showDebugMessage)
                         Serial.println("shouldSaveConfig is: " + String(shouldSaveConfig));
@@ -255,7 +263,7 @@ namespace {
                     //save the custom parameters to FS
                     if (shouldSaveConfig) {
 
-                        WriteDataToFS(setupAPName, custom_account.getValue(), custom_minigkey.getValue(), wm.getWiFiSSID(), wm.getWiFiPass(), custom_rigname.getValue());
+                        WriteDataToFS(setupAPName, custom_account.getValue(), custom_minigkey.getValue(), custom_rigname.getValue());
 
                         WiFi.mode(WIFI_STA); // Setup ESP in client mode
                         delay(1000);

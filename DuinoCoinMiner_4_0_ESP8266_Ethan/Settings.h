@@ -4,16 +4,16 @@
 
 // ---------------------- General settings ---------------------- //
 // Change the part in brackets to your Duino-Coin username
-extern const char DUCO_USER[] = "my_cool_username";
+extern const char DUCO_USER[];
 // Change the part in brackets to your mining key (if you have set it in the wallet)
-extern const char MINER_KEY[] = "mySecretPass";
+extern const char MINER_KEY[];
 // Change the part in brackets to your WiFi name
-extern const char SSID[] = "SSID";
+extern const char SSID[];
 // Change the part in brackets to your WiFi password
-extern const char PASSWORD[] = "PASSW0RD";
+extern const char PASSWORD[];
 // Change the part in brackets if you want to set a custom miner name
 // Use Auto to autogenerate, None for no custom identifier
-extern const char RIG_IDENTIFIER[] = "None";
+extern const char RIG_IDENTIFIER[];
 
 // Uncomment if you want to host the dashboard page (available on ESPs IP address)
 // #define WEB_DASHBOARD
@@ -55,11 +55,11 @@ extern const char RIG_IDENTIFIER[] = "None";
 #define BLINK_CLIENT_CONNECT 5
 
 #define SOFTWARE_VERSION "4.0"
-extern unsigned int hashrate = 0;
-extern unsigned int difficulty = 0;
-extern unsigned long share_count = 0;
-extern String node_id = "";
-extern String WALLET_ID = "";
+extern unsigned int hashrate;
+extern unsigned int difficulty;
+extern unsigned long share_count;
+extern String node_id;
+extern String WALLET_ID;
 
 #if defined(USE_INTERNAL_SENSOR)
   #include "driver/temp_sensor.h"

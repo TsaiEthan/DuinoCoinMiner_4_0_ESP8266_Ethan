@@ -130,8 +130,8 @@ namespace {
             // Increase wait time till a maximum of 32 seconds
             // (addresses: Limit connection requests on failure in ESP boards #1041)
             waitTime *= 2;
-            if (waitTime > 32)
-                waitTime = 32;
+            if (waitTime > 8)
+                waitTime = 8;
         }
 
         UpdateHostPort(input);

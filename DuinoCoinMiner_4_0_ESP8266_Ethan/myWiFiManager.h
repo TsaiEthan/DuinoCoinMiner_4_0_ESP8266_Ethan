@@ -30,6 +30,7 @@ DuinoCoin新版官方程式修改說明
 
 ★★★ 注意：WiFiManger中文化及加掛Logo圖片，是透過修改 C:\Users\yamah\Documents\Arduino\libraries\WiFiManager\ 資料夾內 WiFiManager.cpp 及 wm_strings_en.h 達成 ★★★
 
+★★ .ino檔內的 SelectNode() 函式，數字32可改小，縮短重新連線時間 ★★
 
 */
 

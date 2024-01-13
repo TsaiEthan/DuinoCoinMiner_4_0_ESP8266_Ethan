@@ -330,8 +330,9 @@ void loopOneCore() {
 }
 
 void loop() {
-    doWiFiManager(); //Add This For Run WiFiManager, 3/3
+    
 #if CORE == 1
+    doWiFiManager(); //Add This For Run WiFiManager, 3/3
     loopOneCore();
 #endif
 }

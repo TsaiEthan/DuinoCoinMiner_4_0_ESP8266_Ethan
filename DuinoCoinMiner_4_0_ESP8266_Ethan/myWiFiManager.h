@@ -40,7 +40,7 @@ DuinoCoin新版官方程式修改說明
 #include <FS.h>
 
 #include <WiFiManager.h>
-#define TRIGGER_PIN 0
+
 
 //#pragma once
   
@@ -86,14 +86,22 @@ extern "C" {
 // (ESP32-S2/C3 have 1 core, ESP32 has 2 cores, ESP8266 has 1 core)
 #if defined(ESP8266)
 #define CORE 1
+#define TRIGGER_PIN 0
 typedef ESP8266WebServer WebServer;
 #elif defined(CONFIG_FREERTOS_UNICORE)
 #define CORE 1
+#define TRIGGER_PIN 0
 #else
 #define CORE 2
+#define TRIGGER_PIN 4
 // Install TridentTD_EasyFreeRTOS32 if you get an error
 #include <TridentTD_EasyFreeRTOS32.h>
 #endif
+
+#ifdef __cplusplus
+}
+#endif
+
 extern MiningJob* job[CORE];
 void task1_func(void*);
 void task2_func(void*);
@@ -101,8 +109,6 @@ void setup();
 void loopOneCore();
 void loop();
 
-#ifdef __cplusplus
-}
-#endif
+
 
 #endif  // End of MYWIFIMANAGER_H

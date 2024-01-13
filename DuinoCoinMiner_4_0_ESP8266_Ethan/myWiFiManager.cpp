@@ -3,6 +3,11 @@
 #include "MiningJob.h"
 #include <Arduino.h>
 
+#if defined(ESP8266)
+#else
+#include <SPIFFS.h>
+#endif
+
 bool showDebugMessage = false;
 bool wiFiManagerDebugOutput = true;
 char setupAPName[30] = "DuinoCoin-AP";
@@ -74,7 +79,12 @@ namespace {
     }
 
     void ReadFSData() {
-        if (!SPIFFS.begin()) { //to start littlefs
+#if defined(ESP8266)
+        if (!SPIFFS.begin())
+#else
+        if (!SPIFFS.begin(true))
+#endif
+        { //to start littlefs
             if (showDebugMessage)
                 Serial.println("SPIFFS mount failed");
             return;
@@ -105,7 +115,12 @@ namespace {
         }
 
         if (readFile("/rigName.txt") == "") {
+#if defined(ESP8266)
             configuration->RIG_IDENTIFIER = "ESP8266_";
+#else
+            configuration->RIG_IDENTIFIER = "ESP32_";
+#endif
+            
             //strcpy(rigName, "ESP8266_");
         }
         else {
@@ -216,7 +231,7 @@ namespace {
     }
 
     void doWiFiManager() {   // 執行WiFi管理員的工作
-        // // 若按鈕<Flash>被按下1.5秒
+        //若按鈕<Flash>被按下1.5秒
         if (digitalRead(TRIGGER_PIN) == LOW) {
             delay(50);
             if (digitalRead(TRIGGER_PIN) == LOW) {
